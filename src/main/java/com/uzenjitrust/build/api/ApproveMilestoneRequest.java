@@ -1,0 +1,9 @@
+package com.uzenjitrust.build.api;
+
+import jakarta.validation.constraints.NotBlank;
+
+public record ApproveMilestoneRequest(
+        @NotBlank(message = "idempotencyKey is required")
+        String idempotencyKey
+) {
+}

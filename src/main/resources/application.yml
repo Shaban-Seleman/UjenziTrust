@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: uzenji-trust-core
+  datasource:
+    url: jdbc:postgresql://localhost:5432/uzenji_trust
+    username: uzenji
+    password: uzenji
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+    open-in-view: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+    locations: classpath:db/migration
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+logging:
+  level:
+    root: INFO
+  pattern:
+    console: '{"ts":"%d{yyyy-MM-dd''T''HH:mm:ss.SSSXXX}","level":"%p","traceId":"%X{traceId:-}","correlationId":"%X{correlationId:-}","actorUserId":"%X{actorUserId:-}","logger":"%c{1}","message":"%m"}%n'
+
+app:
+  security:
+    jwt:
+      issuer: uzenji-trust
+      ttl-seconds: 3600
+      secret: change-me-in-production-change-me-in-production
+  ops:
+    outbox-batch-size: 20
+    outbox-dispatch-delay-ms: 5000
+    retention-days: 14
+    webhook-replay-window-seconds: 300
+    webhook-secret: change-me-webhook-secret
