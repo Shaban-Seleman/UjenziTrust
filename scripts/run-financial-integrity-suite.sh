@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 echo "[Financial Integrity Suite] Running..."
-if mvn -q -Dtest=FinancialIntegrityVerificationSuiteTest test; then
+if mvn -q -Dtest='*IT' test; then
   echo "[Financial Integrity Suite] PASS"
 else
   echo "[Financial Integrity Suite] FAIL"
