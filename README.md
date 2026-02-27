@@ -41,3 +41,30 @@ Implemented integration scenarios:
 - milestone approval creates disbursement + ledger entry
 - webhook settlement posts ledger and marks milestone PAID only when all split disbursements settle
 - retention release job creates retention disbursement + ledger entry
+
+## Investor demo (seed + end-to-end flow)
+1. Ensure local profile is active so passwordless dev login is allowed:
+```bash
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
+2. Run the demo flow script:
+```bash
+chmod +x scripts/run-investor-demo.sh
+./scripts/run-investor-demo.sh
+```
+
+The script performs a full flow using seeded demo actors:
+- owner/seller creates and publishes a property
+- buyer submits an offer; seller accepts (reservation + purchase escrow)
+- owner creates project, assigns participants, activates project
+- owner creates milestone; contractor submits evidence
+- owner approves milestone (ledger + disbursement + outbox)
+- webhook settlement is simulated with HMAC verification
+- milestone transitions to `PAID`; monitoring endpoints are checked (`ops/outbox`, `ops/webhooks/events`, `ledger/journal-entries`)
+
+Seeded actor emails:
+- `investor.owner@ujenzi.demo` (`OWNER`, `SELLER`)
+- `diaspora.buyer@ujenzi.demo` (`BUYER`)
+- `contractor.site@ujenzi.demo` (`CONTRACTOR`)
+- `inspector.qa@ujenzi.demo` (`INSPECTOR`)
+- `ops.admin@ujenzi.demo` (`ADMIN`)

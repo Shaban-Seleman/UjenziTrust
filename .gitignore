@@ -3,9 +3,17 @@
 *.iml
 .DS_Store
 .env
+/package-lock.json
 
 # Maven
 /.mvn/wrapper/maven-wrapper.jar
 
 # Logs
 *.log
+
+# Frontend artifacts
+apps/**/node_modules/
+apps/**/.next/
+apps/**/out/
+apps/**/.turbo/
+apps/**/.env.local

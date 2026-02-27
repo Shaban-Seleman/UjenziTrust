@@ -3,6 +3,8 @@ package com.uzenjitrust.ops.repo;
 import com.uzenjitrust.ops.domain.DisbursementOrderEntity;
 import com.uzenjitrust.ops.domain.DisbursementStatus;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 
@@ -23,4 +25,6 @@ public interface DisbursementOrderRepository extends JpaRepository<DisbursementO
     long countByMilestoneIdAndStatusNot(UUID milestoneId, DisbursementStatus status);
 
     List<DisbursementOrderEntity> findByMilestoneId(UUID milestoneId);
+
+    Page<DisbursementOrderEntity> findByEscrow_Id(UUID escrowId, Pageable pageable);
 }
