@@ -13,9 +13,58 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @Tag("verify")
 class RetentionReleaseIdempotencyIT extends AbstractFinancialIntegrityIT {
+
+    @Test
+    void retentionReleaseJobSkipsIneligibleMilestones() {
+        UUID owner = UUID.randomUUID();
+        UUID contractor = UUID.randomUUID();
+        UUID inspector = UUID.randomUUID();
+
+        ProjectEntity project = dataFactory.projectWithEscrow(owner, contractor, inspector, "retention-ineligible", new BigDecimal("5000000"));
+
+        MilestoneEntity notPaid = dataFactory.milestone(
+                project,
+                1,
+                new BigDecimal("800000"),
+                new BigDecimal("80000"),
+                MilestoneStatus.APPROVED
+        );
+        notPaid.setRetentionReleaseAt(Instant.now().minus(1, ChronoUnit.HOURS));
+
+        MilestoneEntity notDue = dataFactory.milestone(
+                project,
+                2,
+                new BigDecimal("800000"),
+                new BigDecimal("80000"),
+                MilestoneStatus.PAID
+        );
+        notDue.setPaidAt(Instant.now().minus(20, ChronoUnit.DAYS));
+        notDue.setRetentionReleaseAt(Instant.now().plus(1, ChronoUnit.HOURS));
+
+        MilestoneEntity zeroRetention = dataFactory.milestone(
+                project,
+                3,
+                new BigDecimal("800000"),
+                BigDecimal.ZERO,
+                MilestoneStatus.PAID
+        );
+        zeroRetention.setPaidAt(Instant.now().minus(20, ChronoUnit.DAYS));
+        zeroRetention.setRetentionReleaseAt(Instant.now().minus(1, ChronoUnit.HOURS));
+
+        milestoneRepository.save(notPaid);
+        milestoneRepository.save(notDue);
+        milestoneRepository.save(zeroRetention);
+
+        assertEquals(0, retentionOrchestrator.releaseDueRetentionsSystem());
+
+        assertEquals(0L, assertions.disbursementCountByBusinessKey("RETENTION:" + notPaid.getId()));
+        assertEquals(0L, assertions.disbursementCountByBusinessKey("RETENTION:" + notDue.getId()));
+        assertEquals(0L, assertions.disbursementCountByBusinessKey("RETENTION:" + zeroRetention.getId()));
+    }
 
     @Test
     void retentionReleaseJobDoesNotDoubleRelease() {
@@ -48,7 +97,11 @@ class RetentionReleaseIdempotencyIT extends AbstractFinancialIntegrityIT {
         assertEquals(1L, assertions.ledgerEntryCountByIdempotency(
                 "RETENTION_RELEASE_AUTHORIZED",
                 milestone.getId().toString(),
-                "RETENTION_RELEASE_JOB:" + milestone.getId()
+                "RETREL:" + milestone.getId()
         ));
+
+        MilestoneEntity released = milestoneRepository.findById(milestone.getId()).orElseThrow();
+        assertEquals(MilestoneStatus.RETENTION_RELEASED, released.getStatus());
+        assertNotNull(released.getRetentionReleasedAt());
     }
 }

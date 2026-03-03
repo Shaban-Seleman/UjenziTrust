@@ -1,10 +1,30 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { authCookieOptions, getAuthCookieName } from "@/lib/auth/session";
 
-const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL ?? "http://localhost:8080";
+
+function resolveMaxAge(expiresAt: unknown) {
+  if (typeof expiresAt !== "string") {
+    return 60 * 60 * 12;
+  }
+
+  const expiry = new Date(expiresAt).getTime();
+  if (Number.isNaN(expiry)) {
+    return 60 * 60 * 12;
+  }
+
+  const seconds = Math.floor((expiry - Date.now()) / 1000);
+  return seconds > 0 ? seconds : 60 * 60 * 12;
+}
 
 export async function POST(request: NextRequest) {
-  const body = await request.text();
+  const payload = (await request.json().catch(() => null)) as
+    | { email?: string; password?: string; identifier?: string }
+    | null;
+  const body = JSON.stringify({
+    identifier: payload?.email ?? payload?.identifier ?? "",
+    password: payload?.password ?? ""
+  });
   const correlationId = request.headers.get("x-correlation-id") ?? crypto.randomUUID();
 
   const response = await fetch(`${backendUrl}/auth/login`, {
@@ -14,7 +34,8 @@ export async function POST(request: NextRequest) {
       "x-correlation-id": correlationId
     },
     body,
-    cache: "no-store"
+    cache: "no-store",
+    credentials: "include"
   });
 
   const contentType = response.headers.get("content-type") ?? "application/json";
@@ -38,19 +59,30 @@ export async function POST(request: NextRequest) {
   }
 
   const token = typeof parsed.accessToken === "string" ? parsed.accessToken : undefined;
-  if (token) {
-    cookies().set("access_token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 12
-    });
+  if (!token) {
+    return NextResponse.json(
+      {
+        Type: "about:blank",
+        Title: "Invalid auth response",
+        Status: 502,
+        Detail: "Backend login response did not include an access token"
+      },
+      { status: 502, headers: { "x-correlation-id": correlationId } }
+    );
   }
-  const nextResponse = NextResponse.json({ ok: true }, { headers: { "x-correlation-id": correlationId } });
-  const backendSetCookie = response.headers.get("set-cookie");
-  if (backendSetCookie) {
-    nextResponse.headers.set("set-cookie", backendSetCookie);
-  }
+
+  const nextResponse = NextResponse.json(
+    {
+      ok: true,
+      userId: parsed.userId,
+      roles: parsed.roles,
+      expiresAt: parsed.expiresAt
+    },
+    { headers: { "x-correlation-id": correlationId } }
+  );
+  nextResponse.cookies.set(getAuthCookieName(), token, {
+    ...authCookieOptions(resolveMaxAge(parsed.expiresAt))
+  });
+
   return nextResponse;
 }

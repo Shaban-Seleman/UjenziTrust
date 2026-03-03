@@ -4,14 +4,8 @@ export function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        retry: (failureCount, error) => {
-          const status = (error as { status?: number })?.status;
-          if (status && status >= 400 && status < 500) {
-            return false;
-          }
-          return failureCount < 2;
-        },
-        staleTime: 30_000,
+        retry: 1,
+        staleTime: 15_000,
         refetchOnWindowFocus: false
       },
       mutations: {

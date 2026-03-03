@@ -11,7 +11,11 @@ import com.uzenjitrust.build.domain.SubmissionStatus;
 import com.uzenjitrust.build.repo.MilestoneRepository;
 import com.uzenjitrust.build.repo.MilestoneSubmissionRepository;
 import com.uzenjitrust.build.repo.ProjectRepository;
+import com.uzenjitrust.common.error.ForbiddenException;
 import com.uzenjitrust.common.error.NotFoundException;
+import com.uzenjitrust.common.security.ActorPrincipal;
+import com.uzenjitrust.common.security.ActorProvider;
+import com.uzenjitrust.common.security.AppRole;
 import com.uzenjitrust.common.security.AuthorizationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,17 +31,20 @@ public class MilestoneService {
     private final MilestoneRepository milestoneRepository;
     private final MilestoneSubmissionRepository submissionRepository;
     private final AuthorizationService authorizationService;
+    private final ActorProvider actorProvider;
     private final ObjectMapper objectMapper;
 
     public MilestoneService(ProjectRepository projectRepository,
                             MilestoneRepository milestoneRepository,
                             MilestoneSubmissionRepository submissionRepository,
                             AuthorizationService authorizationService,
+                            ActorProvider actorProvider,
                             ObjectMapper objectMapper) {
         this.projectRepository = projectRepository;
         this.milestoneRepository = milestoneRepository;
         this.submissionRepository = submissionRepository;
         this.authorizationService = authorizationService;
+        this.actorProvider = actorProvider;
         this.objectMapper = objectMapper;
     }
 
@@ -68,6 +75,9 @@ public class MilestoneService {
 
     @Transactional(readOnly = true)
     public List<MilestoneEntity> listByProject(UUID projectId) {
+        ProjectEntity project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new NotFoundException("Project not found"));
+        requireProjectAccess(project);
         return milestoneRepository.findByProject_IdOrderBySequenceNoAsc(projectId);
     }
 
@@ -87,5 +97,19 @@ public class MilestoneService {
         submission.setNotes(request.notes());
         submission.setStatus(SubmissionStatus.SUBMITTED);
         return submissionRepository.save(submission);
+    }
+
+    private void requireProjectAccess(ProjectEntity project) {
+        ActorPrincipal actor = actorProvider.requireActor();
+        if (actor.roles().contains(AppRole.ADMIN)) {
+            return;
+        }
+
+        boolean canAccess = actor.userId().equals(project.getOwnerUserId())
+                || actor.userId().equals(project.getContractorUserId())
+                || actor.userId().equals(project.getInspectorUserId());
+        if (!canAccess) {
+            throw new ForbiddenException("Project access denied");
+        }
     }
 }

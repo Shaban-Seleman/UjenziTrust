@@ -41,7 +41,7 @@ public class MilestoneOrchestrator {
 
     @Transactional
     public MilestoneEntity approveMilestoneSingle(java.util.UUID milestoneId, String idempotencyKey) {
-        MilestoneEntity milestone = milestoneRepository.findById(milestoneId)
+        MilestoneEntity milestone = milestoneRepository.findByIdForUpdate(milestoneId)
                 .orElseThrow(() -> new NotFoundException("Milestone not found"));
         ProjectEntity project = milestone.getProject();
         var actor = authorizationService.requireOwner(project.getOwnerUserId());

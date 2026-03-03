@@ -1,10 +1,11 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { authCookieOptions, getAuthCookieName } from "@/lib/auth/session";
 
-const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL ?? "http://localhost:8080";
 
 async function handle(request: NextRequest, params: { path: string[] }) {
-  const token = cookies().get("access_token")?.value;
+  const authCookieName = getAuthCookieName();
+  const token = request.cookies.get(authCookieName)?.value;
   const path = params.path.join("/");
   const target = new URL(`${backendUrl}/${path}`);
   request.nextUrl.searchParams.forEach((value, key) => target.searchParams.set(key, value));
@@ -27,17 +28,24 @@ async function handle(request: NextRequest, params: { path: string[] }) {
     method,
     headers,
     body,
-    cache: "no-store"
+    cache: "no-store",
+    credentials: "include"
   });
 
   const text = await response.text();
-  return new NextResponse(text, {
+  const nextResponse = new NextResponse(text, {
     status: response.status,
     headers: {
       "content-type": response.headers.get("content-type") ?? "application/json",
       "x-correlation-id": headers.get("x-correlation-id") ?? ""
     }
   });
+
+  if (response.status === 401) {
+    nextResponse.cookies.set(authCookieName, "", authCookieOptions(0));
+  }
+
+  return nextResponse;
 }
 
 export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {

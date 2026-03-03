@@ -1,6 +1,7 @@
 package com.uzenjitrust.integration;
 
 import com.uzenjitrust.common.error.AppException;
+import com.uzenjitrust.common.error.ForbiddenException;
 import com.uzenjitrust.common.security.AppRole;
 import com.uzenjitrust.market.api.AcceptOfferRequest;
 import com.uzenjitrust.market.domain.OfferEntity;
@@ -13,6 +14,7 @@ import com.uzenjitrust.market.repo.OfferRepository;
 import com.uzenjitrust.market.repo.PropertyRepository;
 import com.uzenjitrust.market.repo.PropertyReservationRepository;
 import com.uzenjitrust.market.service.OfferService;
+import com.uzenjitrust.market.service.PropertyService;
 import com.uzenjitrust.support.PostgresIntegrationTest;
 import com.uzenjitrust.support.TestSecurity;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,8 @@ class MarketplaceIntegrationTest extends PostgresIntegrationTest {
     private PropertyReservationRepository reservationRepository;
     @Autowired
     private OfferService offerService;
+    @Autowired
+    private PropertyService propertyService;
 
     @Test
     void acceptOfferPreventsDoubleReservation() {
@@ -90,5 +94,39 @@ class MarketplaceIntegrationTest extends PostgresIntegrationTest {
                 .findByProperty_IdAndStatus(property.getId(), ReservationStatus.ACTIVE)
                 .orElseThrow();
         assertEquals(offerA.getId(), reservation.getOfferId());
+    }
+
+    @Test
+    void getPropertyAllowsPublishedReadButKeepsDraftOwnerOnly() {
+        UUID ownerId = TestSecurity.randomUser();
+        UUID buyerId = TestSecurity.randomUser();
+
+        PropertyEntity published = new PropertyEntity();
+        published.setOwnerUserId(ownerId);
+        published.setTitle("Mikocheni house");
+        published.setDescription("Published listing");
+        published.setLocation("Dar es Salaam");
+        published.setAskingPrice(new BigDecimal("350000000"));
+        published.setCurrency("TZS");
+        published.setStatus(PropertyStatus.PUBLISHED);
+        published = propertyRepository.save(published);
+
+        PropertyEntity draft = new PropertyEntity();
+        draft.setOwnerUserId(ownerId);
+        draft.setTitle("Masaki penthouse");
+        draft.setDescription("Draft listing");
+        draft.setLocation("Dar es Salaam");
+        draft.setAskingPrice(new BigDecimal("900000000"));
+        draft.setCurrency("TZS");
+        draft.setStatus(PropertyStatus.DRAFT);
+        draft = propertyRepository.save(draft);
+        UUID draftId = draft.getId();
+
+        TestSecurity.as(buyerId, AppRole.BUYER);
+        assertEquals(published.getId(), propertyService.getById(published.getId()).getId());
+        assertThrows(ForbiddenException.class, () -> propertyService.getById(draftId));
+
+        TestSecurity.as(ownerId, AppRole.OWNER);
+        assertEquals(draftId, propertyService.getById(draftId).getId());
     }
 }

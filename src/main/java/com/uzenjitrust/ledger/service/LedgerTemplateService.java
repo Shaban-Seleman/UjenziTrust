@@ -11,6 +11,9 @@ import java.util.UUID;
 @Service
 public class LedgerTemplateService {
 
+    public record PayableAllocation(String accountCode, BigDecimal amount) {
+    }
+
     public LedgerPostingRequest milestoneAuthorizedSingle(UUID milestoneId,
                                                           UUID actorUserId,
                                                           BigDecimal grossAmount,
@@ -40,9 +43,11 @@ public class LedgerTemplateService {
                                                          BigDecimal totalAmount,
                                                          String currency,
                                                          String idempotencyKey,
-                                                         List<BigDecimal> splitAmounts,
+                                                         List<PayableAllocation> allocations,
                                                          BigDecimal retentionAmount) {
-        BigDecimal splitTotal = splitAmounts.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal splitTotal = allocations.stream()
+                .map(PayableAllocation::amount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         if (splitTotal.add(retentionAmount).compareTo(totalAmount) != 0) {
             throw new IllegalArgumentException("Split amounts + retention must equal total milestone amount");
         }
@@ -50,8 +55,8 @@ public class LedgerTemplateService {
         List<LedgerPostingLine> lines = new ArrayList<>();
         lines.add(new LedgerPostingLine(LedgerAccountCodes.ESCROW_LIABILITY, LineType.DEBIT, totalAmount, currency));
 
-        for (BigDecimal split : splitAmounts) {
-            lines.add(new LedgerPostingLine(LedgerAccountCodes.PAYABLE_CONTRACTOR, LineType.CREDIT, split, currency));
+        for (PayableAllocation allocation : allocations) {
+            lines.add(new LedgerPostingLine(allocation.accountCode(), LineType.CREDIT, allocation.amount(), currency));
         }
 
         if (retentionAmount.compareTo(BigDecimal.ZERO) > 0) {

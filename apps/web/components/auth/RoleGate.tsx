@@ -5,10 +5,17 @@ import { PropsWithChildren } from "react";
 import { useActor } from "@/components/auth/useActor";
 import { AppRole, hasAnyRole } from "@/lib/auth/roles";
 
-export function RoleGate({ roles, children, fallback = null }: PropsWithChildren<{ roles: AppRole[]; fallback?: ReactNode }>) {
-  const { roles: actorRoles } = useActor();
+type RoleGateProps = PropsWithChildren<{
+  allow?: AppRole[];
+  roles?: AppRole[];
+  fallback?: ReactNode;
+}>;
 
-  if (!hasAnyRole(actorRoles, roles)) {
+export function RoleGate({ allow, roles, children, fallback = null }: RoleGateProps) {
+  const { roles: actorRoles } = useActor();
+  const requiredRoles = allow ?? roles ?? [];
+
+  if (!hasAnyRole(actorRoles, requiredRoles)) {
     return <>{fallback}</>;
   }
   return <>{children}</>;

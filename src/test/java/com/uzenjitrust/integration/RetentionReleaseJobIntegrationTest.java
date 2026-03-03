@@ -85,10 +85,11 @@ class RetentionReleaseJobIntegrationTest extends PostgresIntegrationTest {
         assertNotNull(journalEntryRepository.findByEntryTypeAndReferenceIdAndIdempotencyKey(
                 "RETENTION_RELEASE_AUTHORIZED",
                 milestone.getId().toString(),
-                "RETENTION_RELEASE_JOB:" + milestone.getId()
+                "RETREL:" + milestone.getId()
         ).orElse(null));
 
         MilestoneEntity updated = milestoneRepository.findById(milestone.getId()).orElseThrow();
         assertEquals(MilestoneStatus.RETENTION_RELEASED, updated.getStatus());
+        assertNotNull(updated.getRetentionReleasedAt());
     }
 }

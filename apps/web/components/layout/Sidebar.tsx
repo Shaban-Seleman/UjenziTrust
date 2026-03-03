@@ -1,26 +1,27 @@
 "use client";
 
 import { ComponentType } from "react";
+import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Building2, Wallet, Hammer, Shield } from "lucide-react";
 import { useActor } from "@/components/auth/useActor";
-import { AppRole, hasAnyRole } from "@/lib/auth/roles";
+import { AppRole, hasAnyRole, sectionRoles } from "@/lib/auth/roles";
 import { cn } from "@/lib/utils/cn";
 
 type NavItem = {
-  href: string;
+  href: Route;
   label: string;
   icon: ComponentType<{ className?: string }>;
   roles: AppRole[];
 };
 
 const navItems: NavItem[] = [
-  { href: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["OWNER", "SELLER", "BUYER", "CONTRACTOR", "INSPECTOR", "ADMIN"] },
-  { href: "/app/marketplace/properties", label: "Marketplace", icon: Building2, roles: ["OWNER", "SELLER", "BUYER", "ADMIN"] },
-  { href: "/app/escrows", label: "Escrows", icon: Wallet, roles: ["OWNER", "SELLER", "BUYER", "ADMIN"] },
-  { href: "/app/construction/projects", label: "Construction", icon: Hammer, roles: ["OWNER", "CONTRACTOR", "INSPECTOR", "ADMIN"] },
-  { href: "/app/admin", label: "Admin", icon: Shield, roles: ["ADMIN"] }
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: sectionRoles.dashboard },
+  { href: "/marketplace", label: "Marketplace", icon: Building2, roles: sectionRoles.marketplace },
+  { href: "/escrows", label: "Escrows", icon: Wallet, roles: sectionRoles.escrows },
+  { href: "/construction", label: "Construction", icon: Hammer, roles: sectionRoles.construction },
+  { href: "/admin", label: "Admin", icon: Shield, roles: sectionRoles.admin }
 ];
 
 export function Sidebar() {

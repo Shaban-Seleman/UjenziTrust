@@ -2,7 +2,6 @@ package com.uzenjitrust.ops.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uzenjitrust.common.error.BadRequestException;
-import com.uzenjitrust.ledger.service.LedgerAccountCodes;
 import com.uzenjitrust.ops.api.SettlementWebhookRequest;
 import com.uzenjitrust.ops.domain.WebhookEventEntity;
 import com.uzenjitrust.ops.domain.WebhookStatus;
@@ -78,23 +77,13 @@ public class WebhookService {
                 disbursement.getId(),
                 request.payload().settlementRef(),
                 null,
-                payableAccount(disbursement.getPayeeType()),
+                DisbursementService.payableAccountFor(disbursement.getPayeeType()),
                 request.eventId()
         );
 
         event.setStatus(WebhookStatus.PROCESSED);
         event.setProcessedAt(Instant.now());
         return "PROCESSED";
-    }
-
-    private String payableAccount(String payeeType) {
-        return switch (payeeType) {
-            case "CONTRACTOR" -> LedgerAccountCodes.PAYABLE_CONTRACTOR;
-            case "INSPECTOR" -> LedgerAccountCodes.PAYABLE_INSPECTOR;
-            case "SELLER" -> LedgerAccountCodes.PAYABLE_SELLER;
-            case "RETENTION" -> LedgerAccountCodes.PAYABLE_RETENTION;
-            default -> throw new BadRequestException("Unknown payeeType: " + payeeType);
-        };
     }
 
 }

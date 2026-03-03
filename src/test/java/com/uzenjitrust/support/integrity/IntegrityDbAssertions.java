@@ -156,6 +156,48 @@ public class IntegrityDbAssertions {
         );
     }
 
+    public long ledgerLineCountByEntryAndAccount(String entryType, String referenceId, String accountCode) {
+        return jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM ledger.journal_entries je
+                JOIN ledger.journal_lines jl ON jl.journal_entry_id = je.id
+                JOIN ledger.accounts acc ON acc.id = jl.account_id
+                WHERE je.entry_type = ?
+                  AND je.reference_id = ?
+                  AND acc.account_code = ?
+                """,
+                Long.class,
+                entryType,
+                referenceId,
+                accountCode
+        );
+    }
+
+    public BigDecimal ledgerLineAmountByEntryAccountAndType(String entryType,
+                                                            String referenceId,
+                                                            String accountCode,
+                                                            String lineType) {
+        BigDecimal amount = jdbc.queryForObject(
+                """
+                SELECT COALESCE(SUM(jl.amount), 0)
+                FROM ledger.journal_entries je
+                JOIN ledger.journal_lines jl ON jl.journal_entry_id = je.id
+                JOIN ledger.accounts acc ON acc.id = jl.account_id
+                WHERE je.entry_type = ?
+                  AND je.reference_id = ?
+                  AND acc.account_code = ?
+                  AND jl.line_type = ?
+                """,
+                BigDecimal.class,
+                entryType,
+                referenceId,
+                accountCode,
+                lineType
+        );
+        return amount == null ? BigDecimal.ZERO : amount;
+    }
+
     public record UnbalancedJournal(UUID journalEntryId, BigDecimal debits, BigDecimal credits) {
     }
 

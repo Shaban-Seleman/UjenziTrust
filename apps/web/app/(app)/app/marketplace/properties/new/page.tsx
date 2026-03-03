@@ -46,7 +46,7 @@ export default function NewPropertyPage() {
       router.push(`/app/marketplace/properties/${property.id}`);
     },
     onError: (error: unknown) => {
-      const message = error instanceof ApiError ? (error.rawDetail ?? error.detail) : "Create failed";
+      const message = error instanceof ApiError ? error.detail : "Create failed";
       toast.error(message);
     }
   });

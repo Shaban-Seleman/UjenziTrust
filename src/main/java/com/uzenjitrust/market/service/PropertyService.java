@@ -88,6 +88,16 @@ public class PropertyService {
     }
 
     @Transactional(readOnly = true)
+    public PropertyEntity getById(UUID propertyId) {
+        PropertyEntity property = propertyRepository.findById(propertyId)
+                .orElseThrow(() -> new NotFoundException("Property not found"));
+        if (property.getStatus() != PropertyStatus.PUBLISHED) {
+            requireOwnerOrSeller(property.getOwnerUserId());
+        }
+        return property;
+    }
+
+    @Transactional(readOnly = true)
     public Page<PropertyEntity> search(PropertyStatus status,
                                        BigDecimal minPrice,
                                        BigDecimal maxPrice,

@@ -88,7 +88,8 @@ public class LedgerPostingService {
             }).toList();
             journalLineRepository.saveAll(journalLines);
 
-            HashChainEntity tail = hashChainRepository.findTailForUpdate().orElse(null);
+            hashChainRepository.lockChainTable();
+            HashChainEntity tail = hashChainRepository.findTail().orElse(null);
             long nextIndex = tail == null ? 1L : tail.getChainIndex() + 1;
             String prevHash = tail == null ? null : tail.getHash();
             String hash = computeHash(request, nextIndex, prevHash);

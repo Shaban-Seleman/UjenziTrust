@@ -10,6 +10,7 @@ import com.uzenjitrust.build.repo.MilestoneRepository;
 import com.uzenjitrust.common.error.BadRequestException;
 import com.uzenjitrust.common.error.NotFoundException;
 import com.uzenjitrust.common.security.AuthorizationService;
+import com.uzenjitrust.ledger.service.LedgerAccountCodes;
 import com.uzenjitrust.ledger.service.LedgerPostingService;
 import com.uzenjitrust.ledger.service.LedgerTemplateService;
 import com.uzenjitrust.ops.domain.EscrowEntity;
@@ -51,7 +52,7 @@ public class MultiPartyMilestoneOrchestrator {
 
     @Transactional
     public MilestoneEntity approveMilestoneMulti(java.util.UUID milestoneId, ApproveMilestoneMultiRequest request) {
-        MilestoneEntity milestone = milestoneRepository.findById(milestoneId)
+        MilestoneEntity milestone = milestoneRepository.findByIdForUpdate(milestoneId)
                 .orElseThrow(() -> new NotFoundException("Milestone not found"));
         ProjectEntity project = milestone.getProject();
         var actor = authorizationService.requireOwner(project.getOwnerUserId());
@@ -63,8 +64,9 @@ public class MultiPartyMilestoneOrchestrator {
         EscrowEntity escrow = escrowRepository.findById(project.getEscrowId())
                 .orElseThrow(() -> new NotFoundException("Project escrow not found"));
 
-        List<BigDecimal> splitAmounts = new ArrayList<>();
+        List<LedgerTemplateService.PayableAllocation> allocations = new ArrayList<>();
         for (ApproveMilestoneMultiRequest.Split split : request.splits()) {
+            String payableAccountCode = payableAccountFor(split.payeeType());
             MilestonePayoutSplitEntity splitEntity = splitRepository.findByBusinessKey(split.businessKey()).orElseGet(() -> {
                 MilestonePayoutSplitEntity entity = new MilestonePayoutSplitEntity();
                 entity.setMilestone(milestone);
@@ -75,7 +77,7 @@ public class MultiPartyMilestoneOrchestrator {
                 return splitRepository.save(entity);
             });
 
-            splitAmounts.add(splitEntity.getAmount());
+            allocations.add(new LedgerTemplateService.PayableAllocation(payableAccountCode, splitEntity.getAmount()));
             disbursementOrchestrator.createDisbursementAndQueuePayout(
                     "MILESTONE_SPLIT:" + splitEntity.getBusinessKey(),
                     "OUTBOX:MILESTONE_SPLIT:" + splitEntity.getBusinessKey(),
@@ -94,11 +96,19 @@ public class MultiPartyMilestoneOrchestrator {
                 milestone.getAmount(),
                 "TZS",
                 "MILESTONE_AUTH_MULTI:" + request.idempotencyKey(),
-                splitAmounts,
+                allocations,
                 milestone.getRetentionAmount()
         ));
 
         milestone.setStatus(MilestoneStatus.APPROVED);
         return milestone;
+    }
+
+    private String payableAccountFor(String payeeType) {
+        try {
+            return LedgerAccountCodes.payableForPayeeType(payeeType);
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException(ex.getMessage());
+        }
     }
 }

@@ -4,6 +4,7 @@ import com.uzenjitrust.build.domain.MilestoneEntity;
 import com.uzenjitrust.build.domain.MilestoneStatus;
 import com.uzenjitrust.build.repo.MilestoneRepository;
 import com.uzenjitrust.common.error.NotFoundException;
+import com.uzenjitrust.ledger.service.LedgerAccountCodes;
 import com.uzenjitrust.ledger.service.LedgerPostingService;
 import com.uzenjitrust.ledger.service.LedgerTemplateService;
 import com.uzenjitrust.ops.domain.DisbursementOrderEntity;
@@ -103,18 +104,30 @@ public class DisbursementService {
         ));
 
         if (disbursement.getMilestoneId() != null) {
+            MilestoneEntity milestone = milestoneRepository.findByIdForUpdate(disbursement.getMilestoneId())
+                    .orElseThrow(() -> new NotFoundException("Milestone not found"));
+
             long unsettledCount = disbursementRepository.countByMilestoneIdAndStatusNot(
                     disbursement.getMilestoneId(),
                     DisbursementStatus.SETTLED
             );
-            if (unsettledCount == 0) {
-                MilestoneEntity milestone = milestoneRepository.findById(disbursement.getMilestoneId())
-                        .orElseThrow(() -> new NotFoundException("Milestone not found"));
+            if (unsettledCount == 0 && milestone.getStatus() != MilestoneStatus.PAID && milestone.getStatus() != MilestoneStatus.RETENTION_RELEASED) {
                 Instant now = Instant.now();
+                Instant paidAt = milestone.getPaidAt() == null ? now : milestone.getPaidAt();
                 milestone.setStatus(MilestoneStatus.PAID);
-                milestone.setPaidAt(now);
-                milestone.setRetentionReleaseAt(now.plus(opsProperties.getRetentionDays(), ChronoUnit.DAYS));
+                milestone.setPaidAt(paidAt);
+                if (milestone.getRetentionReleaseAt() == null) {
+                    milestone.setRetentionReleaseAt(paidAt.plus(opsProperties.getRetentionDays(), ChronoUnit.DAYS));
+                }
             }
+        }
+    }
+
+    public static String payableAccountFor(String payeeType) {
+        try {
+            return LedgerAccountCodes.payableForPayeeType(payeeType);
+        } catch (IllegalArgumentException ex) {
+            throw new com.uzenjitrust.common.error.BadRequestException(ex.getMessage());
         }
     }
 }

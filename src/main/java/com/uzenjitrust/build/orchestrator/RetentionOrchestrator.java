@@ -4,6 +4,8 @@ import com.uzenjitrust.build.domain.MilestoneEntity;
 import com.uzenjitrust.build.domain.MilestoneStatus;
 import com.uzenjitrust.build.domain.ProjectEntity;
 import com.uzenjitrust.build.repo.MilestoneRepository;
+import com.uzenjitrust.common.error.BadRequestException;
+import com.uzenjitrust.common.error.NotFoundException;
 import com.uzenjitrust.common.security.AuthorizationService;
 import com.uzenjitrust.ledger.service.LedgerPostingService;
 import com.uzenjitrust.ledger.service.LedgerTemplateService;
@@ -43,29 +45,56 @@ public class RetentionOrchestrator {
 
     @Transactional
     public MilestoneEntity releaseRetention(UUID milestoneId, String idempotencyKey) {
-        MilestoneEntity milestone = milestoneRepository.findById(milestoneId)
-                .orElseThrow(() -> new com.uzenjitrust.common.error.NotFoundException("Milestone not found"));
+        MilestoneEntity milestone = milestoneRepository.findByIdForUpdate(milestoneId)
+                .orElseThrow(() -> new NotFoundException("Milestone not found"));
         ProjectEntity project = milestone.getProject();
         var actor = authorizationService.requireOwner(project.getOwnerUserId());
 
-        if (milestone.getRetentionAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            return milestone;
+        if (!isEligibleForRetentionRelease(milestone, Instant.now())) {
+            throw new BadRequestException("Milestone retention is not eligible for release");
         }
 
+        return releaseLockedMilestoneRetention(milestone, actor.userId(), Instant.now());
+    }
+
+    @Transactional
+    public int releaseDueRetentionsSystem() {
+        List<UUID> dueMilestoneIds = milestoneRepository.findIdsEligibleForRetentionRelease(
+                MilestoneStatus.PAID,
+                Instant.now()
+        );
+
+        int released = 0;
+        for (UUID milestoneId : dueMilestoneIds) {
+            MilestoneEntity milestone = milestoneRepository.findByIdForUpdate(milestoneId).orElse(null);
+            if (milestone == null || !isEligibleForRetentionRelease(milestone, Instant.now())) {
+                continue;
+            }
+
+            releaseLockedMilestoneRetention(milestone, milestone.getProject().getOwnerUserId(), Instant.now());
+            released++;
+        }
+        return released;
+    }
+
+    private MilestoneEntity releaseLockedMilestoneRetention(MilestoneEntity milestone,
+                                                            UUID actorUserId,
+                                                            Instant now) {
+        ProjectEntity project = milestone.getProject();
         EscrowEntity escrow = escrowRepository.findById(project.getEscrowId())
-                .orElseThrow(() -> new com.uzenjitrust.common.error.NotFoundException("Project escrow not found"));
+                .orElseThrow(() -> new NotFoundException("Project escrow not found"));
 
         ledgerPostingService.post(ledgerTemplateService.retentionReleaseAuthorized(
                 milestone.getId(),
-                actor.userId(),
+                actorUserId,
                 milestone.getRetentionAmount(),
                 "TZS",
-                "RETENTION_RELEASE_AUTH:" + idempotencyKey
+                retentionLedgerIdempotencyKey(milestone.getId())
         ));
 
         disbursementOrchestrator.createDisbursementAndQueuePayout(
-                "RETENTION:" + milestone.getId(),
-                "OUTBOX:RETENTION:" + milestone.getId(),
+                retentionBusinessKey(milestone.getId()),
+                retentionOutboxKey(milestone.getId()),
                 escrow,
                 milestone.getId(),
                 "RETENTION",
@@ -75,45 +104,28 @@ public class RetentionOrchestrator {
         );
 
         milestone.setStatus(MilestoneStatus.RETENTION_RELEASED);
-        milestone.setRetentionReleaseAt(null);
+        milestone.setRetentionReleasedAt(now);
         return milestone;
     }
 
-    @Transactional
-    public int releaseDueRetentionsSystem() {
-        List<MilestoneEntity> due = milestoneRepository.findByStatusAndRetentionReleaseAtLessThanEqual(
-                MilestoneStatus.PAID,
-                Instant.now()
-        );
-        for (MilestoneEntity milestone : due) {
-            ProjectEntity project = milestone.getProject();
-            EscrowEntity escrow = escrowRepository.findById(project.getEscrowId()).orElse(null);
-            if (escrow == null || milestone.getRetentionAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-                continue;
-            }
+    private boolean isEligibleForRetentionRelease(MilestoneEntity milestone, Instant now) {
+        return milestone.getStatus() == MilestoneStatus.PAID
+                && milestone.getRetentionAmount() != null
+                && milestone.getRetentionAmount().compareTo(java.math.BigDecimal.ZERO) > 0
+                && milestone.getRetentionReleaseAt() != null
+                && !milestone.getRetentionReleaseAt().isAfter(now)
+                && milestone.getRetentionReleasedAt() == null;
+    }
 
-            ledgerPostingService.post(ledgerTemplateService.retentionReleaseAuthorized(
-                    milestone.getId(),
-                    project.getOwnerUserId(),
-                    milestone.getRetentionAmount(),
-                    "TZS",
-                    "RETENTION_RELEASE_JOB:" + milestone.getId()
-            ));
+    private String retentionBusinessKey(UUID milestoneId) {
+        return "RETENTION:" + milestoneId;
+    }
 
-            disbursementOrchestrator.createDisbursementAndQueuePayout(
-                    "RETENTION:" + milestone.getId(),
-                    "OUTBOX:RETENTION:" + milestone.getId(),
-                    escrow,
-                    milestone.getId(),
-                    "RETENTION",
-                    project.getContractorUserId(),
-                    milestone.getRetentionAmount(),
-                    "TZS"
-            );
+    private String retentionOutboxKey(UUID milestoneId) {
+        return "OUTBOX:RETENTION:" + milestoneId;
+    }
 
-            milestone.setStatus(MilestoneStatus.RETENTION_RELEASED);
-            milestone.setRetentionReleaseAt(null);
-        }
-        return due.size();
+    private String retentionLedgerIdempotencyKey(UUID milestoneId) {
+        return "RETREL:" + milestoneId;
     }
 }

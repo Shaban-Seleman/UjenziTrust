@@ -1,5 +1,6 @@
 package com.uzenjitrust.build.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -56,6 +57,9 @@ public class MilestoneEntity {
     @Column(name = "retention_release_at")
     private Instant retentionReleaseAt;
 
+    @Column(name = "retention_released_at")
+    private Instant retentionReleasedAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -81,6 +85,7 @@ public class MilestoneEntity {
         return id;
     }
 
+    @JsonIgnore
     public ProjectEntity getProject() {
         return project;
     }
@@ -163,5 +168,13 @@ public class MilestoneEntity {
 
     public void setRetentionReleaseAt(Instant retentionReleaseAt) {
         this.retentionReleaseAt = retentionReleaseAt;
+    }
+
+    public Instant getRetentionReleasedAt() {
+        return retentionReleasedAt;
+    }
+
+    public void setRetentionReleasedAt(Instant retentionReleasedAt) {
+        this.retentionReleasedAt = retentionReleasedAt;
     }
 }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useActor } from "@/components/auth/useActor";
-import { apiFetch } from "@/lib/api/client";
+import { logout as logoutRequest } from "@/lib/api/endpoints";
 
 export function Topbar() {
   const { actor } = useActor();
@@ -13,9 +13,9 @@ export function Topbar() {
   const router = useRouter();
 
   const logout = useMutation({
-    mutationFn: () => apiFetch("/api/auth/logout", { method: "POST" }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["actor"] });
+    mutationFn: () => logoutRequest(),
+    onSuccess: () => {
+      queryClient.clear();
       router.replace("/login");
     },
     onError: (error: unknown) => {

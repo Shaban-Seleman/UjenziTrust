@@ -51,6 +51,12 @@ public class PropertyController {
         return ResponseEntity.ok(propertyService.publish(propertyId));
     }
 
+    @GetMapping("/{propertyId}")
+    @Operation(summary = "Get property by id")
+    public ResponseEntity<PropertyEntity> getById(@PathVariable UUID propertyId) {
+        return ResponseEntity.ok(propertyService.getById(propertyId));
+    }
+
     @GetMapping
     @Operation(summary = "Search published properties")
     public ResponseEntity<Page<PropertyEntity>> search(
