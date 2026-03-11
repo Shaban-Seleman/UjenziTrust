@@ -6,6 +6,8 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
@@ -20,6 +22,8 @@ public interface MilestoneRepository extends JpaRepository<MilestoneEntity, UUID
     Optional<MilestoneEntity> findByIdForUpdate(@Param("id") UUID id);
 
     List<MilestoneEntity> findByProject_IdOrderBySequenceNoAsc(UUID projectId);
+
+    Page<MilestoneEntity> findByProject_Id(UUID projectId, Pageable pageable);
 
     @Query("""
             select m.id

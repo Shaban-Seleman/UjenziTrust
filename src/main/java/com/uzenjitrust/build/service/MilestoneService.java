@@ -18,6 +18,9 @@ import com.uzenjitrust.common.security.ActorProvider;
 import com.uzenjitrust.common.security.AppRole;
 import com.uzenjitrust.common.security.AuthorizationService;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -79,6 +82,26 @@ public class MilestoneService {
                 .orElseThrow(() -> new NotFoundException("Project not found"));
         requireProjectAccess(project);
         return milestoneRepository.findByProject_IdOrderBySequenceNoAsc(projectId);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<MilestoneEntity> listByProject(UUID projectId,
+                                               int page,
+                                               int size,
+                                               String sortBy,
+                                               Sort.Direction direction) {
+        ProjectEntity project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new NotFoundException("Project not found"));
+        requireProjectAccess(project);
+        return milestoneRepository.findByProject_Id(projectId, PageRequest.of(page, size, Sort.by(direction, sortBy)));
+    }
+
+    @Transactional(readOnly = true)
+    public MilestoneEntity getVisibleById(UUID milestoneId) {
+        MilestoneEntity milestone = milestoneRepository.findById(milestoneId)
+                .orElseThrow(() -> new NotFoundException("Milestone not found"));
+        requireProjectAccess(milestone.getProject());
+        return milestone;
     }
 
     @Transactional

@@ -57,6 +57,16 @@ public class PropertyController {
         return ResponseEntity.ok(propertyService.getById(propertyId));
     }
 
+    @GetMapping("/mine")
+    @Operation(summary = "List current owner/seller properties including drafts")
+    public ResponseEntity<Page<PropertyEntity>> listMine(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") Sort.Direction direction) {
+        return ResponseEntity.ok(propertyService.listMine(page, size, sortBy, direction));
+    }
+
     @GetMapping
     @Operation(summary = "Search published properties")
     public ResponseEntity<Page<PropertyEntity>> search(

@@ -8,9 +8,12 @@ export default function PublicHomePage() {
       <p className="mt-4 max-w-2xl text-muted-foreground">
         Real estate marketplace, escrow lifecycle, and construction milestone payouts for Tanzania.
       </p>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+        Marketplace browsing requires sign-in. Continue to dashboard to access properties, offers, reservations, and escrow workflows.
+      </p>
       <div className="mt-6 flex gap-3">
         <Link href="/login"><Button>Open Dashboard</Button></Link>
-        <Link href="/properties"><Button variant="outline">Browse Listings</Button></Link>
+        <Link href="/app/marketplace/properties"><Button variant="outline">Go to Marketplace</Button></Link>
       </div>
     </div>
   );

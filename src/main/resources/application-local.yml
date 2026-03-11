@@ -4,5 +4,7 @@ spring:
       on-profile: local
 
 app:
+  demo:
+    enabled: true
   security:
     dev-login-enabled: true

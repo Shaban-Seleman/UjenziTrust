@@ -24,13 +24,32 @@ async function handle(request: NextRequest, params: { path: string[] }) {
   const method = request.method.toUpperCase();
   const body = method === "GET" || method === "HEAD" ? undefined : await request.text();
 
-  const response = await fetch(target.toString(), {
-    method,
-    headers,
-    body,
-    cache: "no-store",
-    credentials: "include"
-  });
+  let response: Response;
+  try {
+    response = await fetch(target.toString(), {
+      method,
+      headers,
+      body,
+      cache: "no-store",
+      credentials: "include"
+    });
+  } catch {
+    return NextResponse.json(
+      {
+        Type: "upstream_unavailable",
+        Title: "Backend unavailable",
+        Status: 503,
+        Detail: `Failed to reach backend at ${backendUrl}. Start the backend service and retry.`,
+        Instance: request.nextUrl.pathname
+      },
+      {
+        status: 503,
+        headers: {
+          "x-correlation-id": headers.get("x-correlation-id") ?? ""
+        }
+      }
+    );
+  }
 
   const text = await response.text();
   const nextResponse = new NextResponse(text, {

@@ -9,6 +9,13 @@ export const actorSchema = z.object({
   name: z.string().optional()
 }).passthrough();
 
+export const directoryUserSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  role: z.string()
+}).passthrough();
+
 export const propertySchema = z.object({
   id: z.string().uuid(),
   ownerUserId: z.string().uuid().optional(),
@@ -137,6 +144,18 @@ export const ledgerEntrySchema = z.object({
   createdAt: maybeDate
 }).passthrough();
 
+export const demoSeedSummarySchema = z.object({
+  usersCreated: z.coerce.number(),
+  propertiesCreated: z.coerce.number(),
+  offersCreated: z.coerce.number(),
+  escrowsCreated: z.coerce.number(),
+  projectsCreated: z.coerce.number(),
+  milestonesCreated: z.coerce.number(),
+  disbursementsCreated: z.coerce.number(),
+  settledDisbursements: z.coerce.number(),
+  retentionReadyCount: z.coerce.number()
+}).passthrough();
+
 export const splitSchema = z.object({
   payeeType: z.string(),
   payeeId: z.string().uuid(),
@@ -154,6 +173,7 @@ export const pageSchema = <T extends z.ZodTypeAny>(item: T) =>
   }).passthrough();
 
 export type Actor = z.infer<typeof actorSchema>;
+export type DirectoryUser = z.infer<typeof directoryUserSchema>;
 export type Property = z.infer<typeof propertySchema>;
 export type Offer = z.infer<typeof offerSchema>;
 export type Reservation = z.infer<typeof reservationSchema>;
@@ -162,4 +182,5 @@ export type Disbursement = z.infer<typeof disbursementSchema>;
 export type Project = z.infer<typeof projectSchema>;
 export type Milestone = z.infer<typeof milestoneSchema>;
 export type Inspection = z.infer<typeof inspectionSchema>;
+export type DemoSeedSummary = z.infer<typeof demoSeedSummarySchema>;
 export type SplitInput = z.infer<typeof splitSchema>;

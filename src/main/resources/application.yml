@@ -33,6 +33,8 @@ logging:
     console: '{"ts":"%d{yyyy-MM-dd''T''HH:mm:ss.SSSXXX}","level":"%p","traceId":"%X{traceId:-}","correlationId":"%X{correlationId:-}","actorUserId":"%X{actorUserId:-}","logger":"%c{1}","message":"%m"}%n'
 
 app:
+  demo:
+    enabled: false
   security:
     jwt:
       issuer: uzenji-trust

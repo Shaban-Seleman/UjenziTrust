@@ -19,4 +19,6 @@ public interface PropertyRepository extends JpaRepository<PropertyEntity, UUID> 
     Optional<PropertyEntity> findByIdForUpdate(@org.springframework.data.repository.query.Param("id") UUID id);
 
     Page<PropertyEntity> findByStatusAndAskingPriceBetween(PropertyStatus status, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
+
+    Page<PropertyEntity> findByOwnerUserId(UUID ownerUserId, Pageable pageable);
 }

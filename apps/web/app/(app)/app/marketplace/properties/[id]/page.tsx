@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { RoleGate } from "@/components/auth/RoleGate";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ const offerSchema = z.object({ amount: z.coerce.number().positive() });
 type OfferForm = z.infer<typeof offerSchema>;
 
 export default function PropertyDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const propertyQuery = useQuery({ queryKey: ["property", params.id], queryFn: () => getProperty(params.id) });
 
@@ -24,8 +26,10 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
   const publish = useMutation({
     mutationFn: () => publishProperty(params.id),
     onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["properties"] });
       await queryClient.invalidateQueries({ queryKey: ["property", params.id] });
       toast.success("Property published");
+      router.push("/app/marketplace/properties");
     },
     onError: () => toast.error("Publish failed")
   });
@@ -59,7 +63,12 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
           <p>Price: {formatMoney(property.askingPrice ?? 0, property.currency ?? "TZS")}</p>
           <p>Status: {property.status}</p>
           <RoleGate roles={["SELLER", "OWNER", "ADMIN"]}>
-            <Button onClick={() => publish.mutate()} disabled={publish.isPending}>Publish</Button>
+            <Button
+              onClick={() => publish.mutate()}
+              disabled={publish.isPending || property.status === "PUBLISHED"}
+            >
+              {property.status === "PUBLISHED" ? "Published" : publish.isPending ? "Publishing..." : "Publish"}
+            </Button>
           </RoleGate>
         </CardContent>
       </Card>

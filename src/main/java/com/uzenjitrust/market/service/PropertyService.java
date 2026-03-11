@@ -3,6 +3,7 @@ package com.uzenjitrust.market.service;
 import com.uzenjitrust.common.error.BadRequestException;
 import com.uzenjitrust.common.error.NotFoundException;
 import com.uzenjitrust.common.security.AppRole;
+import com.uzenjitrust.common.security.ActorPrincipal;
 import com.uzenjitrust.common.security.AuthorizationService;
 import com.uzenjitrust.market.api.CreatePropertyRequest;
 import com.uzenjitrust.market.api.UpdatePropertyRequest;
@@ -107,6 +108,16 @@ public class PropertyService {
                                        Sort.Direction direction) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
         return propertyRepository.findByStatusAndAskingPriceBetween(status, minPrice, maxPrice, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PropertyEntity> listMine(int page,
+                                         int size,
+                                         String sortBy,
+                                         Sort.Direction direction) {
+        ActorPrincipal actor = authorizationService.requireRole(AppRole.OWNER, AppRole.SELLER);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        return propertyRepository.findByOwnerUserId(actor.userId(), pageable);
     }
 
     private void requireOwnerOrSeller(UUID ownerUserId) {

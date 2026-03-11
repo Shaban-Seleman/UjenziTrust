@@ -11,16 +11,17 @@ import { cn } from "@/lib/utils/cn";
 
 type NavItem = {
   href: Route;
+  matchPrefix?: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
   roles: AppRole[];
 };
 
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: sectionRoles.dashboard },
-  { href: "/marketplace", label: "Marketplace", icon: Building2, roles: sectionRoles.marketplace },
-  { href: "/escrows", label: "Escrows", icon: Wallet, roles: sectionRoles.escrows },
-  { href: "/construction", label: "Construction", icon: Hammer, roles: sectionRoles.construction },
+  { href: "/app/dashboard", matchPrefix: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: sectionRoles.dashboard },
+  { href: "/app/marketplace/properties", matchPrefix: "/app/marketplace", label: "Marketplace", icon: Building2, roles: sectionRoles.marketplace },
+  { href: "/app/escrows", matchPrefix: "/app/escrows", label: "Escrows", icon: Wallet, roles: sectionRoles.escrows },
+  { href: "/app/construction/projects", matchPrefix: "/app/construction", label: "Construction", icon: Hammer, roles: sectionRoles.construction },
   { href: "/admin", label: "Admin", icon: Shield, roles: sectionRoles.admin }
 ];
 
@@ -36,7 +37,8 @@ export function Sidebar() {
       </div>
       <nav className="space-y-1 p-3">
         {navItems.filter((item) => hasAnyRole(roles, item.roles)).map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const activePrefix = item.matchPrefix ?? item.href;
+          const active = pathname === item.href || pathname.startsWith(`${activePrefix}/`);
           const Icon = item.icon;
           return (
             <Link

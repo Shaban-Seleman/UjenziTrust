@@ -68,3 +68,32 @@ Seeded actor emails:
 - `contractor.site@ujenzi.demo` (`CONTRACTOR`)
 - `inspector.qa@ujenzi.demo` (`INSPECTOR`)
 - `ops.admin@ujenzi.demo` (`ADMIN`)
+
+## Local-only demo seed engine
+Warning: this is local-only. It truncates all business data, including `ledger.*`, and must not be enabled outside the `local` profile.
+
+1. Start the app with the local profile:
+```bash
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
+2. Log in as an admin and call the reset + seed endpoint:
+```bash
+curl -X POST http://localhost:8080/admin/demo/reset-and-seed?scenario=investor_v1 \
+  -H "Authorization: Bearer <admin-jwt>"
+```
+
+Available endpoints:
+- `POST /admin/demo/reset`
+- `POST /admin/demo/seed?scenario=investor_v1`
+- `POST /admin/demo/reset-and-seed?scenario=investor_v1`
+
+Demo accounts (local profile only):
+- `demo-admin@nyumbatrust.local` (`ADMIN`)
+- `demo-seller@nyumbatrust.local` (`SELLER`)
+- `demo-owner@nyumbatrust.local` (`OWNER`)
+- `demo-contractor@nyumbatrust.local` (`CONTRACTOR`)
+- `demo-inspector@nyumbatrust.local` (`INSPECTOR`)
+- `demo-buyer-1@nyumbatrust.local` through `demo-buyer-5@nyumbatrust.local` (`BUYER`)
+
+Shared demo password (local profile only):
+- `Demo123!`

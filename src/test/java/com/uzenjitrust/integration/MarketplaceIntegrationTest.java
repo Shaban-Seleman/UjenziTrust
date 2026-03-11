@@ -129,4 +129,46 @@ class MarketplaceIntegrationTest extends PostgresIntegrationTest {
         TestSecurity.as(ownerId, AppRole.OWNER);
         assertEquals(draftId, propertyService.getById(draftId).getId());
     }
+
+    @Test
+    void listMineReturnsOwnerPropertiesIncludingDraftsOnly() {
+        UUID ownerId = TestSecurity.randomUser();
+        UUID otherOwnerId = TestSecurity.randomUser();
+
+        PropertyEntity ownerDraft = new PropertyEntity();
+        ownerDraft.setOwnerUserId(ownerId);
+        ownerDraft.setTitle("Owner draft");
+        ownerDraft.setLocation("Dar es Salaam");
+        ownerDraft.setAskingPrice(new BigDecimal("120000000"));
+        ownerDraft.setCurrency("TZS");
+        ownerDraft.setStatus(PropertyStatus.DRAFT);
+        propertyRepository.save(ownerDraft);
+
+        PropertyEntity ownerPublished = new PropertyEntity();
+        ownerPublished.setOwnerUserId(ownerId);
+        ownerPublished.setTitle("Owner published");
+        ownerPublished.setLocation("Arusha");
+        ownerPublished.setAskingPrice(new BigDecimal("220000000"));
+        ownerPublished.setCurrency("TZS");
+        ownerPublished.setStatus(PropertyStatus.PUBLISHED);
+        propertyRepository.save(ownerPublished);
+
+        PropertyEntity otherDraft = new PropertyEntity();
+        otherDraft.setOwnerUserId(otherOwnerId);
+        otherDraft.setTitle("Other owner draft");
+        otherDraft.setLocation("Mwanza");
+        otherDraft.setAskingPrice(new BigDecimal("180000000"));
+        otherDraft.setCurrency("TZS");
+        otherDraft.setStatus(PropertyStatus.DRAFT);
+        propertyRepository.save(otherDraft);
+
+        TestSecurity.as(ownerId, AppRole.OWNER);
+
+        var results = propertyService.listMine(0, 20, "createdAt", org.springframework.data.domain.Sort.Direction.DESC);
+
+        assertEquals(2, results.getTotalElements());
+        assertEquals(2, results.getContent().size());
+        assertEquals(ownerId, results.getContent().get(0).getOwnerUserId());
+        assertEquals(ownerId, results.getContent().get(1).getOwnerUserId());
+    }
 }

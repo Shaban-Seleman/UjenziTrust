@@ -1,12 +1,5 @@
-import { ModulePlaceholder } from "@/components/layout/ModulePlaceholder";
-import { sectionRoles } from "@/lib/auth/roles";
+import { AdminMonitoringDashboard } from "@/components/admin/AdminMonitoringDashboard";
 
 export default function AdminPage() {
-  return (
-    <ModulePlaceholder
-      title="Admin"
-      description="Placeholder page for operational oversight and administrative tooling."
-      allow={[...sectionRoles.admin]}
-    />
-  );
+  return <AdminMonitoringDashboard />;
 }
