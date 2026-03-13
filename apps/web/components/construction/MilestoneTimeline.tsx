@@ -179,7 +179,15 @@ export function MilestoneTimeline({ projectId, milestones }: MilestoneTimelinePr
                         )}
                         {milestone.hasFailures ? <Badge className="bg-red-100 text-red-700">Failed</Badge> : null}
                         {milestone.inspectionStatus ? <Badge className="bg-indigo-100 text-indigo-800">{milestone.inspectionStatus}</Badge> : null}
+                        {milestone.inspectionResult ? (
+                          <Badge className={milestone.inspectionResult === "FAIL" ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-800"}>
+                            {milestone.inspectionResult}
+                          </Badge>
+                        ) : null}
                       </div>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Inspection completed: {formatTimestamp(milestone.inspectionCompletedAt)}
+                      </p>
                     </div>
 
                     <div className="rounded-lg border border-border p-3">

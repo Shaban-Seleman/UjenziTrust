@@ -153,4 +153,12 @@ public class OutboxEventEntity {
     public void setLastError(String lastError) {
         this.lastError = lastError;
     }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
 }

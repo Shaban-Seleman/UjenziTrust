@@ -150,4 +150,12 @@ public class InspectionEntity {
     public void setFeeAmount(BigDecimal feeAmount) {
         this.feeAmount = feeAmount;
     }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
 }

@@ -7,6 +7,7 @@ public class OpsProperties {
 
     private int outboxBatchSize = 20;
     private long outboxDispatchDelayMs = 5000;
+    private int outboxMaxAutoRetryAttempts = 5;
     private int retentionDays = 14;
     private int webhookReplayWindowSeconds = 300;
     private String webhookSecret = "change-me-webhook-secret";
@@ -25,6 +26,14 @@ public class OpsProperties {
 
     public void setOutboxDispatchDelayMs(long outboxDispatchDelayMs) {
         this.outboxDispatchDelayMs = outboxDispatchDelayMs;
+    }
+
+    public int getOutboxMaxAutoRetryAttempts() {
+        return outboxMaxAutoRetryAttempts;
+    }
+
+    public void setOutboxMaxAutoRetryAttempts(int outboxMaxAutoRetryAttempts) {
+        this.outboxMaxAutoRetryAttempts = outboxMaxAutoRetryAttempts;
     }
 
     public int getRetentionDays() {

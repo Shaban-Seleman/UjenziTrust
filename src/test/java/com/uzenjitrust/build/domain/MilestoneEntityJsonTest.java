@@ -1,9 +1,11 @@
 package com.uzenjitrust.build.domain;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -11,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class MilestoneEntityJsonTest {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Test
     void serializationExposesProjectIdWithoutSerializingLazyProjectAssociation() throws Exception {
@@ -30,10 +32,18 @@ class MilestoneEntityJsonTest {
         milestone.setAmount(new BigDecimal("1000"));
         milestone.setRetentionAmount(new BigDecimal("100"));
         milestone.setStatus(MilestoneStatus.PLANNED);
+        milestone.setInspectionStatus("COMPLETED");
+        milestone.setInspectionResult("PASS");
+        milestone.setInspectionCompletedAt(Instant.parse("2026-03-11T10:15:30Z"));
+        UUID inspectionId = UUID.randomUUID();
+        milestone.setInspectionId(inspectionId);
 
         var json = objectMapper.readTree(objectMapper.writeValueAsBytes(milestone));
 
         assertEquals(projectId.toString(), json.get("projectId").asText());
+        assertEquals("COMPLETED", json.get("inspectionStatus").asText());
+        assertEquals("PASS", json.get("inspectionResult").asText());
+        assertEquals(inspectionId.toString(), json.get("inspectionId").asText());
         assertFalse(json.has("project"));
     }
 

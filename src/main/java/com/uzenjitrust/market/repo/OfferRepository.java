@@ -21,6 +21,10 @@ public interface OfferRepository extends JpaRepository<OfferEntity, UUID> {
 
     List<OfferEntity> findByProperty_IdAndStatusIn(UUID propertyId, List<OfferStatus> statuses);
 
+    Optional<OfferEntity> findByProperty_IdAndBuyerUserIdAndStatusIn(UUID propertyId,
+                                                                     UUID buyerUserId,
+                                                                     List<OfferStatus> statuses);
+
     @Modifying
     @Query(value = """
         update market.offers

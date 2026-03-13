@@ -31,6 +31,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   DocsProperties docsProperties,
                                                    CorrelationIdFilter correlationIdFilter,
                                                    JwtAuthenticationFilter jwtAuthenticationFilter,
                                                    JsonAuthenticationEntryPoint authenticationEntryPoint,
@@ -44,7 +45,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/actuator/health", "/ops/webhooks/**")
+                        .requestMatchers(publicMatchers(docsProperties))
                         .permitAll()
                         .anyRequest()
                         .authenticated())
@@ -52,5 +53,23 @@ public class SecurityConfig {
                 .addFilterAfter(jwtAuthenticationFilter, CorrelationIdFilter.class);
 
         return http.build();
+    }
+
+    private String[] publicMatchers(DocsProperties docsProperties) {
+        if (docsProperties.isEnabled()) {
+            return new String[]{
+                    "/auth/login",
+                    "/actuator/health",
+                    "/ops/webhooks/**",
+                    "/v3/api-docs/**",
+                    "/swagger-ui/**",
+                    "/swagger-ui.html"
+            };
+        }
+        return new String[]{
+                "/auth/login",
+                "/actuator/health",
+                "/ops/webhooks/**"
+        };
     }
 }

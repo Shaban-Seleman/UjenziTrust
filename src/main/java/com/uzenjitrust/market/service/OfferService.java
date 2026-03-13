@@ -22,6 +22,7 @@ import com.uzenjitrust.market.repo.OfferEventRepository;
 import com.uzenjitrust.market.repo.OfferRepository;
 import com.uzenjitrust.market.repo.PropertyRepository;
 import com.uzenjitrust.market.repo.PropertyReservationRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,6 +73,14 @@ public class OfferService {
             throw new BadRequestException("Offer amount must be positive");
         }
 
+        offerRepository.findByProperty_IdAndBuyerUserIdAndStatusIn(
+                propertyId,
+                actor.userId(),
+                List.of(OfferStatus.SUBMITTED, OfferStatus.COUNTERED)
+        ).ifPresent(existing -> {
+            throw new ConflictException("Buyer already has an open offer for this property");
+        });
+
         OfferEntity offer = new OfferEntity();
         offer.setProperty(property);
         offer.setBuyerUserId(actor.userId());
@@ -81,7 +90,12 @@ public class OfferService {
         offer.setStatus(OfferStatus.SUBMITTED);
         offer.setExpiresAt(Instant.now().plus(7, ChronoUnit.DAYS));
 
-        OfferEntity saved = offerRepository.save(offer);
+        OfferEntity saved;
+        try {
+            saved = offerRepository.save(offer);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ConflictException("Buyer already has an open offer for this property");
+        }
         appendEvent(saved, "SUBMITTED", actor.userId(), request.notes());
         return saved;
     }

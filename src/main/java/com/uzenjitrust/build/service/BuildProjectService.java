@@ -12,6 +12,7 @@ import com.uzenjitrust.common.security.ActorPrincipal;
 import com.uzenjitrust.common.security.ActorProvider;
 import com.uzenjitrust.common.security.AppRole;
 import com.uzenjitrust.common.security.AuthorizationService;
+import com.uzenjitrust.ops.service.OperatorAuditService;
 import com.uzenjitrust.ops.domain.EscrowEntity;
 import com.uzenjitrust.ops.service.EscrowService;
 import org.springframework.data.domain.Page;
@@ -30,15 +31,18 @@ public class BuildProjectService {
     private final AuthorizationService authorizationService;
     private final EscrowService escrowService;
     private final ActorProvider actorProvider;
+    private final OperatorAuditService operatorAuditService;
 
     public BuildProjectService(ProjectRepository projectRepository,
                                AuthorizationService authorizationService,
                                EscrowService escrowService,
-                               ActorProvider actorProvider) {
+                               ActorProvider actorProvider,
+                               OperatorAuditService operatorAuditService) {
         this.projectRepository = projectRepository;
         this.authorizationService = authorizationService;
         this.escrowService = escrowService;
         this.actorProvider = actorProvider;
+        this.operatorAuditService = operatorAuditService;
     }
 
     @Transactional
@@ -70,29 +74,69 @@ public class BuildProjectService {
 
     @Transactional
     public ProjectEntity assignParticipants(UUID projectId, AssignParticipantsRequest request) {
-        ProjectEntity project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new NotFoundException("Project not found"));
-        authorizationService.requireOwner(project.getOwnerUserId());
-        project.setContractorUserId(request.contractorUserId());
-        project.setInspectorUserId(request.inspectorUserId());
-        return project;
+        try {
+            ProjectEntity project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new NotFoundException("Project not found"));
+            authorizationService.requireOwner(project.getOwnerUserId());
+            project.setContractorUserId(request.contractorUserId());
+            project.setInspectorUserId(request.inspectorUserId());
+            operatorAuditService.recordSuccess(
+                    "PROJECT_ASSIGN_PARTICIPANTS",
+                    "PROJECT",
+                    projectId.toString(),
+                    "Assigned contractor and inspector",
+                    java.util.Map.of(
+                            "contractorUserId", request.contractorUserId(),
+                            "inspectorUserId", request.inspectorUserId()
+                    )
+            );
+            return project;
+        } catch (ForbiddenException ex) {
+            operatorAuditService.recordForbidden("PROJECT_ASSIGN_PARTICIPANTS", "PROJECT", projectId.toString(), "Project assignment forbidden", java.util.Map.of(
+                    "contractorUserId", request.contractorUserId(),
+                    "inspectorUserId", request.inspectorUserId()
+            ), ex.getMessage());
+            throw ex;
+        } catch (RuntimeException ex) {
+            operatorAuditService.recordFailure("PROJECT_ASSIGN_PARTICIPANTS", "PROJECT", projectId.toString(), "Project assignment failed", java.util.Map.of(
+                    "contractorUserId", request.contractorUserId(),
+                    "inspectorUserId", request.inspectorUserId()
+            ), ex.getMessage());
+            throw ex;
+        }
     }
 
     @Transactional
     public ProjectEntity activate(UUID projectId) {
-        ProjectEntity project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new NotFoundException("Project not found"));
-        authorizationService.requireOwner(project.getOwnerUserId());
+        try {
+            ProjectEntity project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new NotFoundException("Project not found"));
+            authorizationService.requireOwner(project.getOwnerUserId());
 
-        if (project.getContractorUserId() == null || project.getInspectorUserId() == null) {
-            throw new BadRequestException("Contractor and inspector must be assigned");
-        }
-        if (project.getEscrowId() == null) {
-            throw new BadRequestException("Project escrow is required");
-        }
+            ProjectStatus previousStatus = project.getStatus();
+            if (project.getContractorUserId() == null || project.getInspectorUserId() == null) {
+                throw new BadRequestException("Contractor and inspector must be assigned");
+            }
+            if (project.getEscrowId() == null) {
+                throw new BadRequestException("Project escrow is required");
+            }
 
-        project.setStatus(ProjectStatus.ACTIVE);
-        return project;
+            project.setStatus(ProjectStatus.ACTIVE);
+            operatorAuditService.recordSuccess(
+                    "PROJECT_ACTIVATED",
+                    "PROJECT",
+                    projectId.toString(),
+                    "Project activated",
+                    java.util.Map.of("fromStatus", previousStatus.name(), "toStatus", ProjectStatus.ACTIVE.name())
+            );
+            return project;
+        } catch (ForbiddenException ex) {
+            operatorAuditService.recordForbidden("PROJECT_ACTIVATED", "PROJECT", projectId.toString(), "Project activation forbidden", null, ex.getMessage());
+            throw ex;
+        } catch (RuntimeException ex) {
+            operatorAuditService.recordFailure("PROJECT_ACTIVATED", "PROJECT", projectId.toString(), "Project activation failed", null, ex.getMessage());
+            throw ex;
+        }
     }
 
     @Transactional(readOnly = true)

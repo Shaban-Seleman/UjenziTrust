@@ -1,5 +1,7 @@
 import Link from "next/link";
+import type { Route } from "next";
 import { Button } from "@/components/ui/button";
+import { buildLoginHref } from "@/lib/auth/session";
 
 export default function PublicHomePage() {
   return (
@@ -13,7 +15,7 @@ export default function PublicHomePage() {
       </p>
       <div className="mt-6 flex gap-3">
         <Link href="/login"><Button>Open Dashboard</Button></Link>
-        <Link href="/app/marketplace/properties"><Button variant="outline">Go to Marketplace</Button></Link>
+        <Link href={buildLoginHref("/app/marketplace/properties") as Route}><Button variant="outline">Go to Marketplace</Button></Link>
       </div>
     </div>
   );

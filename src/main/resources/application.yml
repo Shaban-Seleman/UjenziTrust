@@ -26,6 +26,12 @@ management:
       exposure:
         include: health,info,prometheus
 
+springdoc:
+  api-docs:
+    enabled: ${app.docs.enabled:false}
+  swagger-ui:
+    enabled: ${app.docs.enabled:false}
+
 logging:
   level:
     root: INFO
@@ -33,6 +39,8 @@ logging:
     console: '{"ts":"%d{yyyy-MM-dd''T''HH:mm:ss.SSSXXX}","level":"%p","traceId":"%X{traceId:-}","correlationId":"%X{correlationId:-}","actorUserId":"%X{actorUserId:-}","logger":"%c{1}","message":"%m"}%n'
 
 app:
+  docs:
+    enabled: false
   demo:
     enabled: false
   security:

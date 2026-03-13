@@ -6,13 +6,14 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface DisbursementOrderRepository extends JpaRepository<DisbursementOrderEntity, UUID> {
+public interface DisbursementOrderRepository extends JpaRepository<DisbursementOrderEntity, UUID>, JpaSpecificationExecutor<DisbursementOrderEntity> {
 
     Optional<DisbursementOrderEntity> findByBusinessKey(String businessKey);
 

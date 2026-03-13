@@ -13,6 +13,9 @@ export type AdaptedMilestone = {
   settledDisbursements?: number;
   hasFailures?: boolean;
   inspectionStatus?: string;
+  inspectionResult?: string;
+  inspectionCompletedAt?: string;
+  inspectionId?: string;
 };
 
 function asRecord(value: unknown) {
@@ -89,7 +92,10 @@ export function adaptMilestone(milestone: Milestone, index: number): AdaptedMile
     totalDisbursements: summary.totalDisbursements,
     settledDisbursements: summary.settledDisbursements,
     hasFailures: summary.hasFailures,
-    inspectionStatus: getString(raw, ["inspectionStatus", "inspectionResult"])
+    inspectionStatus: getString(raw, ["inspectionStatus"]),
+    inspectionResult: getString(raw, ["inspectionResult"]),
+    inspectionCompletedAt: getString(raw, ["inspectionCompletedAt", "completedAt"]),
+    inspectionId: getString(raw, ["inspectionId"])
   };
 }
 

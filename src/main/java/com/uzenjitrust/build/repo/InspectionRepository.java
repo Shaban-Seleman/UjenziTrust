@@ -5,6 +5,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,4 +14,10 @@ public interface InspectionRepository extends JpaRepository<InspectionEntity, UU
     @Override
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<InspectionEntity> findById(UUID id);
+
+    Optional<InspectionEntity> findInspectionEntityById(UUID id);
+
+    List<InspectionEntity> findByMilestone_IdOrderByCreatedAtDesc(UUID milestoneId);
+
+    Optional<InspectionEntity> findTopByMilestone_IdOrderByCreatedAtDesc(UUID milestoneId);
 }

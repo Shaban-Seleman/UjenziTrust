@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -65,6 +66,18 @@ public class MilestoneEntity {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Transient
+    private String inspectionStatus;
+
+    @Transient
+    private String inspectionResult;
+
+    @Transient
+    private Instant inspectionCompletedAt;
+
+    @Transient
+    private UUID inspectionId;
 
     @PrePersist
     public void onCreate() {
@@ -176,5 +189,37 @@ public class MilestoneEntity {
 
     public void setRetentionReleasedAt(Instant retentionReleasedAt) {
         this.retentionReleasedAt = retentionReleasedAt;
+    }
+
+    public String getInspectionStatus() {
+        return inspectionStatus;
+    }
+
+    public void setInspectionStatus(String inspectionStatus) {
+        this.inspectionStatus = inspectionStatus;
+    }
+
+    public String getInspectionResult() {
+        return inspectionResult;
+    }
+
+    public void setInspectionResult(String inspectionResult) {
+        this.inspectionResult = inspectionResult;
+    }
+
+    public Instant getInspectionCompletedAt() {
+        return inspectionCompletedAt;
+    }
+
+    public void setInspectionCompletedAt(Instant inspectionCompletedAt) {
+        this.inspectionCompletedAt = inspectionCompletedAt;
+    }
+
+    public UUID getInspectionId() {
+        return inspectionId;
+    }
+
+    public void setInspectionId(UUID inspectionId) {
+        this.inspectionId = inspectionId;
     }
 }

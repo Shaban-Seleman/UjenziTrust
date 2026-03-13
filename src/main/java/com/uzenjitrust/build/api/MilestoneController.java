@@ -5,6 +5,7 @@ import com.uzenjitrust.build.domain.MilestoneSubmissionEntity;
 import com.uzenjitrust.build.orchestrator.MilestoneOrchestrator;
 import com.uzenjitrust.build.orchestrator.MultiPartyMilestoneOrchestrator;
 import com.uzenjitrust.build.orchestrator.RetentionOrchestrator;
+import com.uzenjitrust.build.service.InspectionService;
 import com.uzenjitrust.build.service.MilestoneService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,15 +28,18 @@ import java.util.UUID;
 public class MilestoneController {
 
     private final MilestoneService milestoneService;
+    private final InspectionService inspectionService;
     private final MilestoneOrchestrator milestoneOrchestrator;
     private final MultiPartyMilestoneOrchestrator multiOrchestrator;
     private final RetentionOrchestrator retentionOrchestrator;
 
     public MilestoneController(MilestoneService milestoneService,
+                               InspectionService inspectionService,
                                MilestoneOrchestrator milestoneOrchestrator,
                                MultiPartyMilestoneOrchestrator multiOrchestrator,
                                RetentionOrchestrator retentionOrchestrator) {
         this.milestoneService = milestoneService;
+        this.inspectionService = inspectionService;
         this.milestoneOrchestrator = milestoneOrchestrator;
         this.multiOrchestrator = multiOrchestrator;
         this.retentionOrchestrator = retentionOrchestrator;
@@ -63,6 +67,12 @@ public class MilestoneController {
     @Operation(summary = "Get milestone by id")
     public ResponseEntity<MilestoneEntity> getById(@PathVariable UUID milestoneId) {
         return ResponseEntity.ok(milestoneService.getVisibleById(milestoneId));
+    }
+
+    @GetMapping("/milestones/{milestoneId}/inspections")
+    @Operation(summary = "List inspections for a milestone")
+    public ResponseEntity<java.util.List<InspectionResponse>> listInspections(@PathVariable UUID milestoneId) {
+        return ResponseEntity.ok(inspectionService.listByMilestone(milestoneId));
     }
 
     @PostMapping("/milestones/{milestoneId}/submit")

@@ -158,4 +158,12 @@ public class DisbursementOrderEntity {
     public void setBankReference(String bankReference) {
         this.bankReference = bankReference;
     }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
 }

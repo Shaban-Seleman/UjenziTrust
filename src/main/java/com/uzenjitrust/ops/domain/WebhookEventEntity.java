@@ -125,4 +125,8 @@ public class WebhookEventEntity {
     public void setStatus(WebhookStatus status) {
         this.status = status;
     }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
 }

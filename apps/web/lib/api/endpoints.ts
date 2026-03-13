@@ -7,14 +7,20 @@ import {
   disbursementSchema,
   escrowSchema,
   inspectionSchema,
+  ledgerEntryDetailSchema,
   ledgerEntrySchema,
   milestoneSchema,
   offerSchema,
+  operatorAuditDetailSchema,
+  operatorAuditSchema,
+  outboxEventDetailSchema,
   outboxEventSchema,
   pageSchema,
   projectSchema,
   propertySchema,
   reservationSchema,
+  systemHealthSchema,
+  webhookEventDetailSchema,
   webhookEventSchema
 } from "@/lib/api/schemas";
 
@@ -36,16 +42,23 @@ async function fetchPage<TSchema extends z.ZodTypeAny>(
   path: string,
   schema: TSchema,
   page = 0,
-  size = 10
+  size = 10,
+  filters?: Record<string, string | undefined | null>
 ): Promise<PagedResult<z.infer<TSchema>>> {
-  const query = new URLSearchParams({ page: String(page), size: String(size) }).toString();
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  Object.entries(filters ?? {}).forEach(([key, value]) => {
+    if (value) {
+      params.set(key, value);
+    }
+  });
+  const query = params.toString();
   const separator = path.includes("?") ? "&" : "?";
   const data = await apiFetch(`${path}${separator}${query}`, { method: "GET" }, pageSchema(schema));
   return data;
 }
 
 export const authMe = () => apiFetch("/api/auth/me", { method: "GET" }, actorSchema);
-export const listDirectoryUsers = (role: "CONTRACTOR" | "INSPECTOR") =>
+export const listDirectoryUsers = (role: "CONTRACTOR" | "INSPECTOR" | "SUPPLIER") =>
   apiFetch(`users/directory?role=${role}`, { method: "GET" }, z.array(directoryUserSchema));
 export const login = (email: string, password: string) =>
   apiFetch("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
@@ -77,6 +90,8 @@ export async function listMyPropertiesPage(page = 0, size = 10): Promise<PagedRe
 export const getProperty = (id: string) => apiFetch(`market/properties/${id}`, { method: "GET" }, propertySchema);
 export const createProperty = (payload: Record<string, unknown>) =>
   apiFetch("market/properties", { method: "POST", body: JSON.stringify(payload) }, propertySchema);
+export const updateProperty = (id: string, payload: Record<string, unknown>) =>
+  apiFetch(`market/properties/${id}`, { method: "PUT", body: JSON.stringify(payload) }, propertySchema);
 export const publishProperty = (id: string) => apiFetch(`market/properties/${id}/publish`, { method: "POST" }, propertySchema);
 
 export async function listOffers() {
@@ -139,6 +154,17 @@ export async function listDisbursementsByEscrowPage(
   return fetchPage(`ops/escrows/${escrowId}/disbursements`, disbursementSchema, page, size);
 }
 
+export async function listAdminDisbursementsPage(
+  page = 0,
+  size = 10,
+  filters?: { status?: string; payeeType?: string }
+): Promise<PagedResult<z.infer<typeof disbursementSchema>>> {
+  return fetchPage("ops/disbursements", disbursementSchema, page, size, filters);
+}
+
+export const getAdminDisbursement = (id: string) =>
+  apiFetch(`ops/disbursements/${id}`, { method: "GET" }, disbursementSchema);
+
 export async function listProjects() {
   const data = await apiFetch("build/projects", { method: "GET" }, pageOrArray(projectSchema));
   return toItems(data);
@@ -171,6 +197,12 @@ export const createMilestone = (projectId: string, payload: {
 
 export const getMilestone = (milestoneId: string) =>
   apiFetch(`build/milestones/${milestoneId}`, { method: "GET" }, milestoneSchema);
+
+export const listMilestoneInspections = (milestoneId: string) =>
+  apiFetch(`build/milestones/${milestoneId}/inspections`, { method: "GET" }, z.array(inspectionSchema));
+
+export const getInspection = (inspectionId: string) =>
+  apiFetch(`build/inspections/${inspectionId}`, { method: "GET" }, inspectionSchema);
 
 export async function listMilestones(projectId: string) {
   const data = await apiFetch(`build/projects/${projectId}/milestones`, { method: "GET" }, pageOrArray(milestoneSchema));
@@ -208,6 +240,20 @@ export async function listOutboxEventsPage(page = 0, size = 10): Promise<PagedRe
   return fetchPage("ops/outbox", outboxEventSchema, page, size);
 }
 
+export async function listOutboxEventsAdminPage(
+  page = 0,
+  size = 10,
+  filters?: { status?: string; eventType?: string }
+): Promise<PagedResult<z.infer<typeof outboxEventSchema>>> {
+  return fetchPage("ops/outbox", outboxEventSchema, page, size, filters);
+}
+
+export const getOutboxEvent = (id: string) =>
+  apiFetch(`ops/outbox/${id}`, { method: "GET" }, outboxEventDetailSchema);
+
+export const retryOutboxEvent = (id: string) =>
+  apiFetch(`ops/outbox/${id}/retry`, { method: "POST" }, outboxEventDetailSchema);
+
 export async function listWebhookEvents() {
   const data = await apiFetch("ops/webhooks/events", { method: "GET" }, pageOrArray(webhookEventSchema));
   return toItems(data);
@@ -217,6 +263,17 @@ export async function listWebhookEventsPage(page = 0, size = 10): Promise<PagedR
   return fetchPage("ops/webhooks/events", webhookEventSchema, page, size);
 }
 
+export async function listWebhookEventsAdminPage(
+  page = 0,
+  size = 10,
+  filters?: { status?: string; eventType?: string; source?: string }
+): Promise<PagedResult<z.infer<typeof webhookEventSchema>>> {
+  return fetchPage("ops/webhooks/events", webhookEventSchema, page, size, filters);
+}
+
+export const getWebhookEvent = (id: string) =>
+  apiFetch(`ops/webhooks/events/${id}`, { method: "GET" }, webhookEventDetailSchema);
+
 export async function listLedgerEntries() {
   const data = await apiFetch("ledger/journal-entries", { method: "GET" }, pageOrArray(ledgerEntrySchema));
   return toItems(data);
@@ -225,3 +282,28 @@ export async function listLedgerEntries() {
 export async function listLedgerEntriesPage(page = 0, size = 10): Promise<PagedResult<z.infer<typeof ledgerEntrySchema>>> {
   return fetchPage("ledger/journal-entries", ledgerEntrySchema, page, size);
 }
+
+export async function listLedgerEntriesAdminPage(
+  page = 0,
+  size = 10,
+  filters?: { entryType?: string; referenceId?: string }
+): Promise<PagedResult<z.infer<typeof ledgerEntrySchema>>> {
+  return fetchPage("ledger/journal-entries", ledgerEntrySchema, page, size, filters);
+}
+
+export const getLedgerEntry = (id: string) =>
+  apiFetch(`ledger/journal-entries/${id}`, { method: "GET" }, ledgerEntryDetailSchema);
+
+export const getSystemHealth = () =>
+  apiFetch("ops/system-health", { method: "GET" }, systemHealthSchema);
+
+export async function listOperatorAuditEventsPage(
+  page = 0,
+  size = 10,
+  filters?: { actionType?: string; outcome?: string }
+): Promise<PagedResult<z.infer<typeof operatorAuditSchema>>> {
+  return fetchPage("ops/operator-audit-events", operatorAuditSchema, page, size, filters);
+}
+
+export const getOperatorAuditEvent = (id: string) =>
+  apiFetch(`ops/operator-audit-events/${id}`, { method: "GET" }, operatorAuditDetailSchema);

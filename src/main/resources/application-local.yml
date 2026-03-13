@@ -4,6 +4,8 @@ spring:
       on-profile: local
 
 app:
+  docs:
+    enabled: true
   demo:
     enabled: true
   security:

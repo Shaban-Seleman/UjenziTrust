@@ -1,8 +1,10 @@
 package com.uzenjitrust.integration;
 
 import com.uzenjitrust.common.error.AppException;
+import com.uzenjitrust.common.error.ConflictException;
 import com.uzenjitrust.common.error.ForbiddenException;
 import com.uzenjitrust.common.security.AppRole;
+import com.uzenjitrust.market.api.SubmitOfferRequest;
 import com.uzenjitrust.market.api.AcceptOfferRequest;
 import com.uzenjitrust.market.domain.OfferEntity;
 import com.uzenjitrust.market.domain.OfferStatus;
@@ -170,5 +172,69 @@ class MarketplaceIntegrationTest extends PostgresIntegrationTest {
         assertEquals(2, results.getContent().size());
         assertEquals(ownerId, results.getContent().get(0).getOwnerUserId());
         assertEquals(ownerId, results.getContent().get(1).getOwnerUserId());
+    }
+
+    @Test
+    void submitOfferPreventsDuplicateOpenOfferBySameBuyerForSameProperty() {
+        UUID sellerId = TestSecurity.randomUser();
+        UUID buyerId = TestSecurity.randomUser();
+
+        PropertyEntity property = new PropertyEntity();
+        property.setOwnerUserId(sellerId);
+        property.setTitle("Upanga apartment");
+        property.setDescription("Investor unit");
+        property.setLocation("Dar es Salaam");
+        property.setAskingPrice(new BigDecimal("257500000"));
+        property.setCurrency("TZS");
+        property.setStatus(PropertyStatus.PUBLISHED);
+        property = propertyRepository.save(property);
+
+        TestSecurity.as(buyerId, AppRole.BUYER);
+        OfferEntity first = offerService.submit(
+                property.getId(),
+                new SubmitOfferRequest(new BigDecimal("250000000"), "TZS", "first offer")
+        );
+
+        ConflictException duplicate = assertThrows(ConflictException.class, () -> offerService.submit(
+                property.getId(),
+                new SubmitOfferRequest(new BigDecimal("890000000000000"), "TZS", "duplicate open offer")
+        ));
+
+        assertEquals("Buyer already has an open offer for this property", duplicate.getMessage());
+        assertEquals(1, offerRepository.findByProperty_IdAndStatusIn(property.getId(), List.of(OfferStatus.SUBMITTED, OfferStatus.COUNTERED)).size());
+        assertEquals(first.getId(), offerRepository.findByProperty_IdAndStatusIn(property.getId(), List.of(OfferStatus.SUBMITTED, OfferStatus.COUNTERED)).getFirst().getId());
+    }
+
+    @Test
+    void submitOfferAllowsNewOfferAfterPreviousOfferIsWithdrawn() {
+        UUID sellerId = TestSecurity.randomUser();
+        UUID buyerId = TestSecurity.randomUser();
+
+        PropertyEntity property = new PropertyEntity();
+        property.setOwnerUserId(sellerId);
+        property.setTitle("Mbezi beach house");
+        property.setDescription("Ocean view");
+        property.setLocation("Dar es Salaam");
+        property.setAskingPrice(new BigDecimal("310000000"));
+        property.setCurrency("TZS");
+        property.setStatus(PropertyStatus.PUBLISHED);
+        property = propertyRepository.save(property);
+
+        TestSecurity.as(buyerId, AppRole.BUYER);
+        OfferEntity first = offerService.submit(
+                property.getId(),
+                new SubmitOfferRequest(new BigDecimal("300000000"), "TZS", "initial")
+        );
+        offerService.withdraw(first.getId(), "replacing bid");
+
+        OfferEntity replacement = offerService.submit(
+                property.getId(),
+                new SubmitOfferRequest(new BigDecimal("320000000"), "TZS", "replacement")
+        );
+
+        assertNotNull(replacement.getId());
+        assertEquals(OfferStatus.SUBMITTED, replacement.getStatus());
+        assertEquals(1, offerRepository.findByProperty_IdAndStatusIn(property.getId(), List.of(OfferStatus.SUBMITTED, OfferStatus.COUNTERED)).size());
+        assertEquals(new BigDecimal("320000000"), replacement.getAmount());
     }
 }
